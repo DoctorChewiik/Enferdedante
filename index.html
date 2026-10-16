@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>L'Enfer de Dante — Simulation 2.5D</title>
+  <title>L'Enfer et le Paradis de Dante</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
@@ -11,6 +11,7 @@
 <body>
   <header>
     <h1>L'Enfer de Dante</h1>
+    <nav id="realms" aria-label="Royaume"><button data-realm="enfer">Enfer</button><button data-realm="paradis">Paradis</button></nav>
     <span class="subtitle">Simulation 2.5D des cercles de l'Inferno</span>
     <a class="pdf" href="docs/Enfer_de_Dante.pdf" target="_blank" rel="noopener">📜 Le dossier PDF</a>
   </header>
@@ -33,6 +34,8 @@
   <script src="js/data.js"></script>
   <script src="js/iso.js"></script>
   <script src="js/scenes.js"></script>
+  <script src="js/paradis-data.js"></script>
+  <script src="js/paradis-scenes.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

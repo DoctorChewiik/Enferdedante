@@ -122,7 +122,7 @@ class IsoScene {
     if (d.overlay) d.overlay(ctx, cw, ch, t);
     // vignette
     const v = ctx.createRadialGradient(cw / 2, ch / 2, Math.min(cw, ch) * 0.35, cw / 2, ch / 2, Math.max(cw, ch) * 0.75);
-    v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.65)');
+    v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, `rgba(0,0,0,${d.vignette ?? 0.65})`);
     ctx.fillStyle = v; ctx.fillRect(0, 0, cw, ch);
   }
 
@@ -186,6 +186,7 @@ function spawnParticle(em, sc) {
     case 'bubble': p.z = sc.ground(x, y); p.life = rand(0.6, 1.4); break;
     case 'sigh': p.z = rand(1.5, 2.5); p.vz = rand(0.4, 0.8); p.life = rand(2, 3); break;
     case 'wasp': p.z = rand(1, 2.5); p.life = rand(1, 2.5); p.vx = rand(-2, 2); p.vy = rand(-2, 2); break;
+    case 'sparkle': p.z = sc.ground(x, y) + rand(0.2, em.zMax || 6); p.vz = rand(0.1, 0.5); p.life = rand(1.2, 2.8); break;
     case 'smoke': p.z = sc.ground(x, y) + 0.3; p.vz = rand(0.3, 0.7); p.vx = rand(-0.2, 0.2); p.life = rand(2, 4); break;
   }
   p.max = p.life;
@@ -224,6 +225,13 @@ function drawParticle(ctx, p, S, k, t) {
       const bx = x + Math.sin(t * 20 + p.seed) * 3 * k, by = y + Math.cos(t * 17 + p.seed) * 2 * k;
       ctx.fillStyle = '#e8c330'; ctx.beginPath(); ctx.ellipse(bx, by, 2 * k, 1.2 * k, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(bx - 1 * k, by - 2.5 * k, 2 * k, 1.2 * k); break;
+    }
+    case 'sparkle': {
+      const tw = Math.sin((1 - a) * Math.PI) * (0.6 + 0.4 * Math.sin(t * 9 + p.seed));
+      const r = 2.2 * k;
+      ctx.strokeStyle = p.color || `rgba(255,248,220,${tw})`; ctx.globalAlpha = Math.max(0, tw); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x - r * 1.6, y); ctx.lineTo(x + r * 1.6, y); ctx.moveTo(x, y - r * 1.6); ctx.lineTo(x, y + r * 1.6); ctx.stroke();
+      ctx.globalAlpha = 1; break;
     }
     case 'smoke': ctx.fillStyle = `rgba(120,140,90,${0.18 * a})`; ctx.beginPath(); ctx.arc(x, y, (8 - 5 * a) * k, 0, Math.PI * 2); ctx.fill(); break;
   }
@@ -377,7 +385,13 @@ function makeSoul(sc, x, y, opts = {}) {
 
 // Dante (robe rouge, contrôlé par le joueur) et Virgile (robe grise, laurier) qui le suit
 const LIQUIDES = ['water', 'blood', 'pitch'];
-function addPoets(sc, x, y) {
+const GUIDES = {
+  virgile: { name: 'Virgile', desc: 'Le poète latin, guide de Dante, envoyé par Béatrice.', fig: { color: '#8a8f99', robe: '#9aa0aa', skin: '#e2c9a8', laurel: true } },
+  beatrice: { name: 'Béatrice', desc: 'Béatrice Portinari, l\'aimée de Dante, figure de la foi et de la grâce. Son sourire devient plus éclatant à chaque ciel.', fig: { color: '#2f7a4a', robe: '#c0392b', skin: '#f0d8c0', hood: '#f4f1ea' } },
+  bernard: { name: 'Saint Bernard', desc: 'Bernard de Clairvaux, le contemplatif dévoué à Marie, dernier guide de Dante vers la vision de Dieu.', fig: { color: '#e8e4da', robe: '#f2efe6', skin: '#e6cdb0' } },
+};
+function addPoets(sc, x, y, guideId = 'virgile') {
+  const G = GUIDES[guideId];
   const dante = sc.add({ x, y, name: 'Dante', desc: 'Le poète florentin, pèlerin vivant guidé à travers l\'Enfer. C\'est vous !', hit: [9, 32], phase: 0, player: true, moving: false, flip: false,
     draw(ctx, sx, sy, k, t, e, scn) {
       const tl = scn.tile(Math.floor(e.x), Math.floor(e.y));
@@ -388,7 +402,7 @@ function addPoets(sc, x, y) {
       ctx.beginPath(); ctx.ellipse(sx, sy, 10 * k, 4 * k, 0, 0, Math.PI * 2); ctx.stroke();
     } });
   sc.player = dante;
-  sc.add({ x: x + 0.6, y: y - 0.5, name: 'Virgile', desc: 'Le poète latin, guide de Dante, envoyé par Béatrice.', hit: [9, 32], phase: 0, moving: false,
+  sc.add({ x: x + 0.6, y: y - 0.5, name: G.name, desc: G.desc, guide: true, hit: [9, 32], phase: 0, moving: false,
     update(dt, t, e) {
       const dx = dante.x - e.x, dy = dante.y - e.y, L = Math.hypot(dx, dy);
       e.moving = L > 0.9;
@@ -396,7 +410,7 @@ function addPoets(sc, x, y) {
     },
     draw(ctx, sx, sy, k, t, e, scn) {
       const tl = scn.tile(Math.floor(e.x), Math.floor(e.y));
-      drawFigure(ctx, sx, sy, k, { color: '#8a8f99', robe: '#9aa0aa', skin: '#e2c9a8', laurel: true, alpha: 1, size: 1.05, pose: e.moving ? 'walk' : 'stand', phase: e.phase, flip: e.flip, sink: tl && LIQUIDES.includes(tl.anim) ? 0.3 : 0 });
+      drawFigure(ctx, sx, sy, k, { ...G.fig, alpha: 1, size: 1.05, pose: e.moving ? 'walk' : 'stand', phase: e.phase, flip: e.flip, sink: tl && LIQUIDES.includes(tl.anim) ? 0.3 : 0 });
     } });
 }
 
