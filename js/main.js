@@ -1,4 +1,4 @@
-// Interface : vue d'ensemble en entonnoir, navigation entre cercles, panneau et infobulles.
+// Interface : Enfer et Paradis, vues d'ensemble, navigation entre cercles et cieux, panneau et infobulles.
 (() => {
   const canvas = document.getElementById('view');
   const ctx = canvas.getContext('2d');
@@ -19,10 +19,13 @@
   const hud = document.getElementById('hud');
   const encounter = document.getElementById('encounter');
   let lastNear = null;
+  let realm = 'enfer';
+  const R = () => REALMS[realm];
 
   // ---------- Navigation ----------
   function buildNav() {
-    const items = [{ label: 'Vue d\'ensemble', small: 'L\'entonnoir', color: '#d6a65a' }].concat(CERCLES.map(c => ({ label: c.nom, small: c.numero, color: c.couleur })));
+    nav.innerHTML = '';
+    const items = [{ label: 'Vue d\'ensemble', small: R().overviewLabel, color: R().accent }].concat(R().data.map(c => ({ label: c.nom, small: c.numero, color: c.couleur })));
     items.forEach((it, q) => {
       const b = document.createElement('button');
       b.innerHTML = `<small>${it.small}</small><span class="dot" style="background:${it.color}"></span>${it.label}`;
@@ -34,8 +37,10 @@
   function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 
   function renderPanel() {
-    if (current < 0) {
-      panel.innerHTML = `
+    panel.innerHTML = current < 0 ? R().intro : R().panel(R().data[current]);
+  }
+
+  const INTRO_ENFER = `
         <div class="num">LA DIVINE COMÉDIE · CHANTS I À XXXIV</div>
         <h2>L'Inferno</h2>
         <h3>Le voyage</h3>
@@ -45,13 +50,24 @@
         <h3>Le contrapasso</h3>
         <p>Chaque peine reflète le péché, par analogie ou par contraste : c'est la loi du « contre-passement », la justice divine qui rend à chacun selon ses œuvres.</p>
         <h3>Explorer</h3>
-        <p>Cliquez sur un anneau de l'entonnoir ou choisissez un cercle à gauche. Dans chaque cercle, survolez les âmes, les gardiens et les lieux pour lire leur histoire. Dante (robe rouge) et Virgile (robe grise) vous accompagnent.</p>`;
-      return;
-    }
-    const c = CERCLES[current];
+        <p>Cliquez sur un anneau de l'entonnoir ou choisissez un cercle à gauche. Dans chaque cercle, déplacez Dante (robe rouge) et approchez les âmes pour lire leur histoire. Virgile (robe grise) vous suit.</p>`;
+
+  const INTRO_PARADIS = `
+        <div class="num">LA DIVINE COMÉDIE · PARADIS, CHANTS I À XXXIII</div>
+        <h2>Le Paradiso</h2>
+        <h3>L'ascension</h3>
+        <p>Au sommet de la montagne du Purgatoire, le jour de Pâques 1300, Dante fixe Béatrice qui fixe le soleil, et s'élève avec elle à travers les cieux, attiré par Dieu comme le feu monte vers le haut. Virgile, païen, n'a pu aller plus loin.</p>
+        <h3>La structure</h3>
+        <p>Le Paradis suit le système de Ptolémée : neuf sphères tournent autour de la Terre (la Lune, Mercure, Vénus, le Soleil, Mars, Jupiter, Saturne, les Étoiles fixes et le Premier Mobile), mues par les neuf chœurs des anges. Au-delà, hors du temps et de l'espace, l'Empyrée, demeure de Dieu et de tous les bienheureux.</p>
+        <h3>Les degrés de la béatitude</h3>
+        <p>Toutes les âmes vivent dans l'Empyrée, mais elles viennent à la rencontre de Dante dans la sphère qui correspond à leur degré de gloire. Chacune est parfaitement heureuse : « En sa volonté est notre paix. » Plus on monte, plus la lumière, la musique et le sourire de Béatrice s'intensifient.</p>
+        <h3>Explorer</h3>
+        <p>Cliquez sur une sphère ou choisissez un ciel à gauche. Dans chaque ciel, déplacez Dante et approchez les lumières : chacune cache une âme. Béatrice vous guide, puis saint Bernard dans l'Empyrée.</p>`;
+
+  function panelEnfer(c) {
     let subs = '';
     if (c.subdivisions) subs = `<h3>Subdivisions</h3>` + c.subdivisions.map(s => `<div class="sub"><b>${esc(s.nom)}</b><span>${esc(s.peche)}</span>${esc(s.chatiment)}</div>`).join('');
-    panel.innerHTML = `
+    return `
       <div class="num">${esc(c.numero.toUpperCase())}</div>
       <h2>${esc(c.nom)}</h2>
       <div class="chants">${esc(c.chants)}</div>
@@ -64,22 +80,48 @@
       <h3>Âmes rencontrées</h3><ul>${c.personnages.map(p => `<li>${esc(p)}</li>`).join('')}</ul>`;
   }
 
+  function panelParadis(c) {
+    return `
+      <div class="num">${esc(c.numero.toUpperCase())}</div>
+      <h2>${esc(c.nom)}</h2>
+      <div class="chants">${esc(c.chants)}</div>
+      <h3>Le lieu</h3><p>${esc(c.lieu)}</p>
+      <h3>Les âmes</h3><p>${esc(c.ames)}</p>
+      <h3>La béatitude</h3><p>${esc(c.beatitude)}</p>
+      <h3>Le sens</h3><p>${esc(c.sens)}</p>
+      <h3>L'intelligence motrice</h3><p>${esc(c.ange)}</p>
+      <h3>Âmes rencontrées</h3><ul>${c.personnages.map(p => `<li>${esc(p)}</li>`).join('')}</ul>`;
+  }
+
   function go(idx) {
-    current = Math.max(-1, Math.min(CERCLES.length - 1, idx));
+    current = Math.max(-1, Math.min(R().data.length - 1, idx));
     [...nav.children].forEach((b, q) => b.classList.toggle('active', q - 1 === current));
     tooltip.hidden = true;
     clickTarget = null; lastNear = null; encounter.hidden = true;
-    if (current >= 0) { scene = new IsoScene(SCENES[CERCLES[current].id]); fitCamera(); rencontres[CERCLES[current].id] = rencontres[CERCLES[current].id] || new Set(); }
+    if (current >= 0) { scene = new IsoScene(R().scenes[R().data[current].id]); fitCamera(); rencontres[key()] = rencontres[key()] || new Set(); }
     else scene = null;
     renderPanel();
-    try { history.replaceState(null, '', current >= 0 ? '#' + CERCLES[current].id : '#'); } catch (e) { /* file:// */ }
+    try { history.replaceState(null, '', current >= 0 ? '#' + R().data[current].id : (realm === 'paradis' ? '#paradis' : '#')); } catch (e) { /* file:// */ }
+  }
+
+  function key() { return realm + ':' + R().data[current].id; }
+
+  function setRealm(r, idx = -1) {
+    realm = r;
+    document.body.classList.toggle('paradis', r === 'paradis');
+    document.querySelectorAll('#realms button').forEach(b => b.classList.toggle('active', b.dataset.realm === r));
+    document.querySelector('header h1').textContent = R().title;
+    document.querySelector('header .subtitle').textContent = R().subtitle;
+    document.querySelector('header .pdf').href = R().pdf;
+    buildNav();
+    go(idx);
   }
 
   // ---------- Caméra ----------
   function fitCamera() {
     if (!scene) return;
     const pts = [];
-    for (const [x, y] of [[0, 0], [scene.w, 0], [0, scene.h], [scene.w, scene.h]]) { pts.push(isoProj(x, y, scene.base)); pts.push(isoProj(x, y, 7)); }
+    for (const [x, y] of [[0, 0], [scene.w, 0], [0, scene.h], [scene.w, scene.h]]) { pts.push(isoProj(x, y, scene.base)); pts.push(isoProj(x, y, scene.def.zTop || 7)); }
     const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
     const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
     const s = Math.min(cw / (maxX - minX), ch / (maxY - minY)) * 0.94;
@@ -113,6 +155,7 @@
   }
 
   function drawOverview(t) {
+    if (realm === 'paradis') { drawParadisOverview(ctx, cw, ch, t, hoverRing); return; }
     const g = ctx.createLinearGradient(0, 0, 0, ch);
     g.addColorStop(0, '#1d120d'); g.addColorStop(1, '#050303');
     ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch);
@@ -179,6 +222,7 @@
   }
 
   function ringAt(mx, my) {
+    if (realm === 'paradis') return paradisRingAt(cw, ch, mx, my);
     const { cx, rings } = ringGeom();
     for (let i = 0; i < rings.length; i++) {
       const r = rings[i];
@@ -208,7 +252,7 @@
     if (current < 0) {
       hoverRing = ringAt(mouse.x, mouse.y);
       canvas.style.cursor = hoverRing >= 0 ? 'pointer' : 'default';
-      if (hoverRing >= 0) showTip(CERCLES[hoverRing].numero + ' · ' + CERCLES[hoverRing].nom, CERCLES[hoverRing].peche);
+      if (hoverRing >= 0) { const c = R().data[hoverRing]; showTip(c.numero + ' · ' + c.nom, c.peche || c.ames); }
       else tooltip.hidden = true;
       return;
     }
@@ -302,7 +346,7 @@
     // rencontre : l'âme nommée la plus proche
     let near = null, best = 1.6;
     for (const e of scene.entities) {
-      if (!e.name || e.player || e.name === 'Virgile') continue;
+      if (!e.name || e.player || e.guide) continue;
       const d = Math.hypot(e.x - p.x, e.y - p.y);
       if (d < best) { best = d; near = e; }
     }
@@ -311,20 +355,30 @@
       if (near) {
         encounter.innerHTML = `<b>${esc(near.name)}</b>${esc(near.desc || '')}`;
         encounter.hidden = false;
-        rencontres[CERCLES[current].id].add(near.name);
+        rencontres[key()].add(near.name);
       } else encounter.hidden = true;
     }
   }
 
   function renderHud() {
     if (current < 0) {
-      const vus = Object.keys(rencontres).length;
-      hud.textContent = vus ? `Cercles visités : ${vus} / ${CERCLES.length}` : 'Cliquez sur un cercle ou appuyez sur Entrée pour descendre';
+      const vus = Object.keys(rencontres).filter(k => k.startsWith(realm + ':')).length;
+      hud.textContent = vus ? `${R().visited} : ${vus} / ${R().data.length}` : R().start;
       return;
     }
-    const total = new Set(scene.entities.filter(e => e.name && !e.player && e.name !== 'Virgile').map(e => e.name)).size;
-    hud.textContent = `Âmes rencontrées : ${rencontres[CERCLES[current].id].size} / ${total}`;
+    const total = new Set(scene.entities.filter(e => e.name && !e.player && !e.guide).map(e => e.name)).size;
+    hud.textContent = `Âmes rencontrées : ${rencontres[key()].size} / ${total}`;
   }
+
+  const REALMS = {
+    enfer: { data: CERCLES, scenes: SCENES, intro: INTRO_ENFER, panel: panelEnfer, overviewLabel: 'L\'entonnoir', accent: '#d6a65a',
+      title: 'L\'Enfer de Dante', subtitle: 'Simulation 2.5D des cercles de l\'Inferno', pdf: 'docs/Enfer_de_Dante.pdf',
+      visited: 'Cercles visités', start: 'Cliquez sur un cercle ou appuyez sur Entrée pour descendre' },
+    paradis: { data: CIELS, scenes: SCENES_PARADIS, intro: INTRO_PARADIS, panel: panelParadis, overviewLabel: 'Les sphères', accent: '#ecd9a8',
+      title: 'Le Paradis de Dante', subtitle: 'Simulation 2.5D des cieux du Paradiso', pdf: 'docs/Paradis_de_Dante.pdf',
+      visited: 'Cieux visités', start: 'Cliquez sur une sphère ou appuyez sur Entrée pour monter' },
+  };
+  document.querySelectorAll('#realms button').forEach(b => { b.onclick = () => setRealm(b.dataset.realm); });
 
   document.getElementById('prev').onclick = () => go(current - 1);
   document.getElementById('next').onclick = () => go(current + 1);
@@ -342,9 +396,10 @@
     requestAnimationFrame(frame);
   }
 
-  buildNav();
   resize();
-  const start = CERCLES.findIndex(c => '#' + c.id === location.hash);
-  go(start);
+  const h = location.hash.slice(1);
+  const ip = CIELS.findIndex(c => c.id === h);
+  if (h === 'paradis' || ip >= 0) setRealm('paradis', ip);
+  else setRealm('enfer', CERCLES.findIndex(c => c.id === h));
   requestAnimationFrame(frame);
 })();

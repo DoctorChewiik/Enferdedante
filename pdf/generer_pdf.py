@@ -22,6 +22,7 @@ from reportlab.platypus import (Image, KeepTogether, PageBreak, Paragraph, Simpl
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 IMAGES = os.path.join(RACINE, "docs", "images")
 SORTIE = os.path.join(RACINE, "docs", "Enfer_de_Dante.pdf")
+PIED = "L'Enfer de Dante — dossier"  # texte de pied de page (modifiable par les autres dossiers)
 
 # ---------- Polices (avec repli sur les polices standard) ----------
 POLICES = {
@@ -87,7 +88,7 @@ def fond(canvas, doc):
     if doc.page > 1:
         canvas.setFont(FI, 8.5)
         canvas.setFillColor(colors.HexColor("#7a6a5a"))
-        canvas.drawString(1.8 * cm, 0.75 * cm, "L'Enfer de Dante — dossier")
+        canvas.drawString(1.8 * cm, 0.75 * cm, PIED)
         canvas.drawRightString(w - 1.8 * cm, 0.75 * cm, str(doc.page))
     canvas.restoreState()
 
