@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>L'Enfer de Dante — Simulation 2.5D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>L'Enfer de Dante</h1>
+    <span class="subtitle">Simulation 2.5D des cercles de l'Inferno</span>
+    <a class="pdf" href="docs/Enfer_de_Dante.pdf" target="_blank" rel="noopener">📜 Le dossier PDF</a>
+  </header>
+  <div id="app">
+    <nav id="nav" aria-label="Cercles"></nav>
+    <main id="stage">
+      <canvas id="view"></canvas>
+      <div id="tooltip" hidden></div>
+      <div id="hud"></div>
+      <div id="encounter" hidden></div>
+      <div id="hint">Déplacez Dante avec les flèches / ZQSD ou un clic · approchez les âmes · survol pour les infos · molette pour zoomer · Entrée : cercle suivant</div>
+      <div id="controls">
+        <button id="prev" title="Cercle précédent">◀</button>
+        <button id="home" title="Vue d'ensemble">⌂</button>
+        <button id="next" title="Cercle suivant">▶</button>
+      </div>
+    </main>
+    <aside id="panel"></aside>
+  </div>
+  <script src="js/data.js"></script>
+  <script src="js/iso.js"></script>
+  <script src="js/scenes.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
