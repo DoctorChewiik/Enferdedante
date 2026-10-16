@@ -391,9 +391,10 @@ SCENES.colere = {
       }
     }
     sc.add({ x: 9, y: 9, name: 'Phlégyas', desc: '« Te voilà, âme félonne ! » Le passeur du Styx conduit Dante et Virgile vers la cité de Dité.', hit: [30, 50],
-      update(dt, t, e) { e.x = 6 + tri(t * 0.04) * 8; e.y = 13 - tri(t * 0.04) * 8; }, draw(ctx, x, y, k, t) { drawBoat(ctx, x, y, k, t, { color: '#4a2e22', robe: '#3a2418', skin: '#a07858' }); drawFigure(ctx, x - 12 * k, y - 6 * k, k, { color: '#a52a2a', robe: '#a52a2a', laurel: true, noShadow: true, alpha: 1 }); drawFigure(ctx, x - 4 * k, y - 6 * k, k, { color: '#8a8f99', robe: '#9aa0aa', laurel: true, noShadow: true, alpha: 1 }); } });
+      update(dt, t, e) { e.x = 6 + tri(t * 0.04) * 8; e.y = 13 - tri(t * 0.04) * 8; }, draw(ctx, x, y, k, t) { drawBoat(ctx, x, y, k, t, { color: '#4a2e22', robe: '#3a2418', skin: '#a07858' }); } });
     makeSoul(sc, 11, 7, { name: 'Filippo Argenti', desc: 'Le Florentin coléreux tend les mains vers la barque ; les autres damnés se jettent sur lui en criant « Sus à Filippo Argenti ! ».', fig: { arms: 'up', sink: 0.45, color: '#8a7a6a' }, update(dt, t, e) { e.phase = t * 4; } });
     sc.add({ x: 0.6, y: 0.6, name: 'La cité de Dité', desc: 'Murailles de fer rougies par le feu éternel, gardées par plus de mille démons tombés du ciel et par les trois Furies.', hit: [80, 120], draw() {} });
+    addPoets(sc, 13.5, 13.5);
   }
 };
 

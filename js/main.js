@@ -13,6 +13,12 @@
   let mouse = { x: -1, y: -1, inside: false };
   let hoverRing = -1;
   let overT = 0;
+  const keys = new Set();
+  let clickTarget = null;           // destination d'un clic dans la scène
+  const rencontres = {};            // id du cercle -> Set des noms rencontrés
+  const hud = document.getElementById('hud');
+  const encounter = document.getElementById('encounter');
+  let lastNear = null;
 
   // ---------- Navigation ----------
   function buildNav() {
@@ -62,7 +68,8 @@
     current = Math.max(-1, Math.min(CERCLES.length - 1, idx));
     [...nav.children].forEach((b, q) => b.classList.toggle('active', q - 1 === current));
     tooltip.hidden = true;
-    if (current >= 0) { scene = new IsoScene(SCENES[CERCLES[current].id]); fitCamera(); }
+    clickTarget = null; lastNear = null; encounter.hidden = true;
+    if (current >= 0) { scene = new IsoScene(SCENES[CERCLES[current].id]); fitCamera(); rencontres[CERCLES[current].id] = rencontres[CERCLES[current].id] || new Set(); }
     else scene = null;
     renderPanel();
     try { history.replaceState(null, '', current >= 0 ? '#' + CERCLES[current].id : '#'); } catch (e) { /* file:// */ }
@@ -221,15 +228,19 @@
   }
 
   // ---------- Entrées ----------
-  let drag = null;
-  canvas.addEventListener('mousedown', ev => { if (current >= 0) { drag = { x: ev.offsetX, y: ev.offsetY, ox: cam.ox, oy: cam.oy, moved: false }; canvas.classList.add('dragging'); } });
+  let drag = null, dragMoved = false;
+  canvas.addEventListener('mousedown', ev => { if (current >= 0) { drag = { x: ev.offsetX, y: ev.offsetY, ox: cam.ox, oy: cam.oy }; dragMoved = false; canvas.classList.add('dragging'); } });
   window.addEventListener('mouseup', () => { drag = null; canvas.classList.remove('dragging'); });
   canvas.addEventListener('mousemove', ev => {
     mouse.x = ev.offsetX; mouse.y = ev.offsetY; mouse.inside = true;
-    if (drag) { cam.ox = drag.ox + ev.offsetX - drag.x; cam.oy = drag.oy + ev.offsetY - drag.y; }
+    if (drag) { if (Math.hypot(ev.offsetX - drag.x, ev.offsetY - drag.y) > 4) dragMoved = true; if (dragMoved) { cam.ox = drag.ox + ev.offsetX - drag.x; cam.oy = drag.oy + ev.offsetY - drag.y; } }
   });
   canvas.addEventListener('mouseleave', () => { mouse.inside = false; tooltip.hidden = true; });
-  canvas.addEventListener('click', ev => { if (current < 0) { const r = ringAt(ev.offsetX, ev.offsetY); if (r >= 0) go(r); } });
+  canvas.addEventListener('click', ev => {
+    if (current < 0) { const r = ringAt(ev.offsetX, ev.offsetY); if (r >= 0) go(r); return; }
+    if (dragMoved) return;
+    clickTarget = screenToWorld(ev.offsetX, ev.offsetY);
+  });
   canvas.addEventListener('wheel', ev => {
     if (current < 0) return;
     ev.preventDefault();
@@ -245,13 +256,76 @@
   canvas.addEventListener('touchmove', ev => { if (!drag || current < 0) return; const t = ev.touches[0], r = canvas.getBoundingClientRect(); cam.ox = drag.ox + t.clientX - r.left - drag.x; cam.oy = drag.oy + t.clientY - r.top - drag.y; }, { passive: true });
   canvas.addEventListener('touchend', ev => {
     if (current < 0 && drag) { const r = ringAt(drag.x, drag.y); if (r >= 0) go(r); }
+    else if (drag && scene && Math.abs(cam.ox - drag.ox) + Math.abs(cam.oy - drag.oy) < 6) clickTarget = screenToWorld(drag.x, drag.y);
     drag = null;
   });
+  const MOVE_KEYS = { arrowup: [-1, -1], z: [-1, -1], w: [-1, -1], arrowdown: [1, 1], s: [1, 1], arrowleft: [-1, 1], q: [-1, 1], a: [-1, 1], arrowright: [1, -1], d: [1, -1] };
   window.addEventListener('keydown', ev => {
-    if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') go(current + 1);
-    else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp') go(current - 1);
-    else if (ev.key === 'Escape') go(-1);
+    const key = ev.key.toLowerCase();
+    if (current < 0) { // vue d'ensemble : les flèches descendent dans l'Enfer
+      if (key === 'arrowright' || key === 'arrowdown' || key === 'enter' || key === ' ') { go(0); ev.preventDefault(); }
+      return;
+    }
+    if (MOVE_KEYS[key]) { keys.add(key); clickTarget = null; ev.preventDefault(); }
+    else if (key === 'pagedown' || key === 'n' || key === 'enter') go(current + 1);
+    else if (key === 'pageup' || key === 'p') go(current - 1);
+    else if (key === 'escape') go(-1);
+    else if (/^[0-9]$/.test(key)) go(Number(key));
   });
+  window.addEventListener('keyup', ev => keys.delete(ev.key.toLowerCase()));
+  window.addEventListener('blur', () => keys.clear());
+
+  // écran -> monde, au niveau du sol du joueur
+  function screenToWorld(mx, my) {
+    const z = scene.player ? scene.ground(scene.player.x, scene.player.y) : 0;
+    const px = (mx - cam.ox) / cam.scale, py = (my - cam.oy) / cam.scale + z * ISO.ZH;
+    const a = px / (ISO.TW / 2), b = py / (ISO.TH / 2);
+    return [(a + b) / 2, (b - a) / 2];
+  }
+
+  function updatePlayer(dt) {
+    const p = scene && scene.player; if (!p) return;
+    let vx = 0, vy = 0;
+    for (const k of keys) { const v = MOVE_KEYS[k]; if (v) { vx += v[0]; vy += v[1]; } }
+    if (!vx && !vy && clickTarget) {
+      const dx = clickTarget[0] - p.x, dy = clickTarget[1] - p.y;
+      if (Math.hypot(dx, dy) < 0.1) clickTarget = null; else { vx = dx; vy = dy; }
+    }
+    const L = Math.hypot(vx, vy);
+    p.moving = false;
+    if (L > 0) {
+      const sp = 2.6 * dt;
+      p.moving = movePlayer(scene, vx / L * sp, vy / L * sp);
+      if (!p.moving) clickTarget = null;
+      p.phase += dt * 10;
+    }
+    // rencontre : l'âme nommée la plus proche
+    let near = null, best = 1.6;
+    for (const e of scene.entities) {
+      if (!e.name || e.player || e.name === 'Virgile') continue;
+      const d = Math.hypot(e.x - p.x, e.y - p.y);
+      if (d < best) { best = d; near = e; }
+    }
+    if (near !== lastNear) {
+      lastNear = near;
+      if (near) {
+        encounter.innerHTML = `<b>${esc(near.name)}</b>${esc(near.desc || '')}`;
+        encounter.hidden = false;
+        rencontres[CERCLES[current].id].add(near.name);
+      } else encounter.hidden = true;
+    }
+  }
+
+  function renderHud() {
+    if (current < 0) {
+      const vus = Object.keys(rencontres).length;
+      hud.textContent = vus ? `Cercles visités : ${vus} / ${CERCLES.length}` : 'Cliquez sur un cercle ou appuyez sur Entrée pour descendre';
+      return;
+    }
+    const total = new Set(scene.entities.filter(e => e.name && !e.player && e.name !== 'Virgile').map(e => e.name)).size;
+    hud.textContent = `Âmes rencontrées : ${rencontres[CERCLES[current].id].size} / ${total}`;
+  }
+
   document.getElementById('prev').onclick = () => go(current - 1);
   document.getElementById('next').onclick = () => go(current + 1);
   document.getElementById('home').onclick = () => go(-1);
@@ -261,9 +335,10 @@
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    if (scene) { scene.update(dt); scene.draw(ctx, cam, cw, ch); }
+    if (scene) { updatePlayer(dt); scene.update(dt); scene.draw(ctx, cam, cw, ch); }
     else { overT += dt; drawOverview(overT); }
     updateHover();
+    renderHud();
     requestAnimationFrame(frame);
   }
 

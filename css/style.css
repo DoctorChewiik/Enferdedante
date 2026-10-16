@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --bg: #0b0807;
   --panel: #15100e;
   --ink: #e9dfcc;
@@ -27,6 +28,9 @@ header h1 { margin: 0; font-family: 'Cinzel', serif; font-size: 22px; color: var
 #tooltip { position: absolute; pointer-events: none; max-width: 280px; background: rgba(12,8,6,0.94); border: 1px solid var(--gold); padding: 8px 10px; border-radius: 4px; font-size: 14px; line-height: 1.35; }
 #tooltip b { font-family: 'Cinzel', serif; color: var(--gold); display: block; margin-bottom: 3px; font-size: 13px; }
 #hint { position: absolute; left: 12px; bottom: 10px; color: var(--muted); font-size: 13px; font-style: italic; pointer-events: none; }
+#hud { position: absolute; left: 12px; top: 10px; font-family: 'Cinzel', serif; font-size: 13px; color: var(--gold); background: rgba(12,8,6,0.7); border: 1px solid var(--line); padding: 5px 10px; border-radius: 4px; pointer-events: none; }
+#encounter { position: absolute; left: 50%; bottom: 56px; transform: translateX(-50%); width: min(560px, 90%); background: rgba(12,8,6,0.92); border: 1px solid var(--gold); border-radius: 6px; padding: 10px 14px; font-size: 15px; line-height: 1.4; pointer-events: none; box-shadow: 0 6px 24px rgba(0,0,0,0.6); }
+#encounter b { display: block; font-family: 'Cinzel', serif; color: var(--gold); margin-bottom: 3px; }
 #controls { position: absolute; right: 12px; bottom: 10px; display: flex; gap: 6px; }
 #controls button { background: rgba(20,14,12,0.85); color: var(--gold); border: 1px solid var(--line); width: 38px; height: 34px; border-radius: 4px; font-size: 16px; cursor: pointer; }
 #controls button:hover { border-color: var(--gold); }

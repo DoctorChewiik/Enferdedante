@@ -375,11 +375,40 @@ function makeSoul(sc, x, y, opts = {}) {
   return sc.add(e);
 }
 
-// Dante (robe rouge) et Virgile (robe grise, laurier), présents dans chaque cercle
+// Dante (robe rouge, contrôlé par le joueur) et Virgile (robe grise, laurier) qui le suit
+const LIQUIDES = ['water', 'blood', 'pitch'];
 function addPoets(sc, x, y) {
-  sc.add({ x, y, name: 'Dante', desc: 'Le poète florentin, pèlerin vivant guidé à travers l\'Enfer.', hit: [9, 32], phase: 0,
-    update(dt, t, e) { e.phase = t; },
-    draw(ctx, sx, sy, k, t) { drawFigure(ctx, sx, sy, k, { color: '#a52a2a', robe: '#a52a2a', skin: '#e2c19a', hood: '#b8322e', laurel: true, alpha: 1 }); } });
-  sc.add({ x: x + 0.6, y: y - 0.5, name: 'Virgile', desc: 'Le poète latin, guide de Dante, envoyé par Béatrice.', hit: [9, 32],
-    draw(ctx, sx, sy, k) { drawFigure(ctx, sx, sy, k, { color: '#8a8f99', robe: '#9aa0aa', skin: '#e2c9a8', laurel: true, alpha: 1, size: 1.05 }); } });
+  const dante = sc.add({ x, y, name: 'Dante', desc: 'Le poète florentin, pèlerin vivant guidé à travers l\'Enfer. C\'est vous !', hit: [9, 32], phase: 0, player: true, moving: false, flip: false,
+    draw(ctx, sx, sy, k, t, e, scn) {
+      const tl = scn.tile(Math.floor(e.x), Math.floor(e.y));
+      const wade = tl && LIQUIDES.includes(tl.anim) ? 0.3 : 0;
+      drawFigure(ctx, sx, sy, k, { color: '#a52a2a', robe: '#a52a2a', skin: '#e2c19a', hood: '#b8322e', laurel: true, alpha: 1, pose: e.moving ? 'walk' : 'stand', phase: e.phase, flip: e.flip, sink: wade });
+      // halo pour repérer le joueur
+      ctx.strokeStyle = `rgba(255,215,120,${0.45 + Math.sin(t * 4) * 0.2})`; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.ellipse(sx, sy, 10 * k, 4 * k, 0, 0, Math.PI * 2); ctx.stroke();
+    } });
+  sc.player = dante;
+  sc.add({ x: x + 0.6, y: y - 0.5, name: 'Virgile', desc: 'Le poète latin, guide de Dante, envoyé par Béatrice.', hit: [9, 32], phase: 0, moving: false,
+    update(dt, t, e) {
+      const dx = dante.x - e.x, dy = dante.y - e.y, L = Math.hypot(dx, dy);
+      e.moving = L > 0.9;
+      if (e.moving) { const sp = Math.min(L - 0.8, 3 * dt); e.x += dx / L * sp; e.y += dy / L * sp; e.phase += dt * 9; e.flip = (dx - dy) < 0; }
+    },
+    draw(ctx, sx, sy, k, t, e, scn) {
+      const tl = scn.tile(Math.floor(e.x), Math.floor(e.y));
+      drawFigure(ctx, sx, sy, k, { color: '#8a8f99', robe: '#9aa0aa', skin: '#e2c9a8', laurel: true, alpha: 1, size: 1.05, pose: e.moving ? 'walk' : 'stand', phase: e.phase, flip: e.flip, sink: tl && LIQUIDES.includes(tl.anim) ? 0.3 : 0 });
+    } });
+}
+
+// Déplace le joueur de (dx, dy) en unités monde, en refusant de franchir les murs et les bords
+function movePlayer(sc, dx, dy) {
+  const p = sc.player; if (!p) return false;
+  const here = sc.ground(p.x, p.y);
+  const ok = (x, y) => { const t = sc.tile(Math.floor(x), Math.floor(y)); return t && !t.hidden && t.h - here < 0.95 && x > 0.15 && y > 0.15 && x < sc.w - 0.15 && y < sc.h - 0.15; };
+  let moved = false;
+  if (ok(p.x + dx, p.y + dy)) { p.x += dx; p.y += dy; moved = true; }
+  else if (ok(p.x + dx, p.y)) { p.x += dx; moved = true; }
+  else if (ok(p.x, p.y + dy)) { p.y += dy; moved = true; }
+  if (moved) p.flip = (dx - dy) < 0;
+  return moved;
 }
